@@ -1,0 +1,52 @@
+# .github/workflows/extract-url.yml
+name: Extract URL from page
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_url:
+        description: 'URL of the page to scrape'
+        required: true
+        default: 'https://example.com'
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+
+    steps:
+      # ۱. کل مخزن را checkout می‌کنیم
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      # ۲. نصب پایتون و کتابخانه‌های مورد نیاز
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests beautifulsoup4
+
+      # ۳. اجرای اسکریپت استخراج
+      - name: Run extractor
+        run: python scripts/extract.py "${{ github.event.inputs.target_url }}"
+
+      # ۴. Commit و push تغییرات (فایل urls.txt)
+      - name: Commit changes
+        env:
+          GIT_AUTHOR_NAME: github-actions
+          GIT_AUTHOR_EMAIL: github-actions@github.com
+          GIT_COMMITTER_NAME: github-actions
+          GIT_COMMITTER_EMAIL: github-actions@github.com
+        run: |
+          git config --global user.email "github-actions@github.com"
+          git config --global user.name "github-actions"
+          git add urls.txt
+          if git diff --cached --quiet; then
+            echo "No changes to commit."
+          else
+            git commit -m "Update URLs from ${{ github.event.inputs.target_url }}"
+            git push
+          fi
