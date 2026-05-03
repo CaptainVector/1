@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
 import sys
+import os
 import requests
 from bs4 import BeautifulSoup
 from urllib.parse import urlparse
 from datetime import datetime
-import os
 
 def main():
     if len(sys.argv) < 2:
@@ -13,33 +15,40 @@ def main():
 
     page_url = sys.argv[1]
 
-    # ------------------- ۱. پارس کردن دامنه -------------------
+    # ۱. پارس کردن دامنه برای نام‌گذاری فایل
     parsed = urlparse(page_url)
-    domain = parsed.netloc   # مثال: "www.wikipedia.org"
-    # اگر بخواهید فقط بخش اصلی دامنه (مثلاً wikipedia.org) را بگیرید:
-    # domain_parts = domain.split('.')
-    # if len(domain_parts) > 2:
-    #     domain = '.'.join(domain_parts[-2:])   # wikipedia.org
+    domain = parsed.netloc  # مثال: www.pornhub.com
 
-    # ------------------- ۲. تعیین نام فایل با تاریخ و ساعت -------------------
+    # ۲. نام فایل با تاریخ و ساعت
     timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     filename = f"{domain}_{timestamp}.txt"
-    # اگر می‌خواهید فایل در پوشه‌ی `results` ذخیره شود:
-    # os.makedirs("results", exist_ok=True)
-    # filename = os.path.join("results", filename)
 
-    # ------------------- ۳. درخواست HTTP (با User‑Agent) -------------------
+    # ۳. ایجاد session (برای کوکی‌های خودکار)
+    session = requests.Session()
+
+    # ۴. هدرهای مطمئن (User‑Agent + Accept‑Language + Referer)
     headers = {
         "User-Agent": (
             "Mozilla/5.0 (X11; Linux x86_64) "
             "AppleWebKit/537.36 (KHTML, like Gecko) "
             "Chrome/121.0.0.0 Safari/537.36"
         ),
-        "Accept-Language": "en-US,en;q=0.9"
+        "Accept-Language": "en-US,en;q=0.9",
+        "Referer": page_url
     }
+    session.headers.update(headers)
 
+    # ۵. پیکربندی پروکسی (اختیاری)
+    proxy_url = os.getenv("PROXY_URL")  # مثال: http://user:pass@proxy:3128
+    if proxy_url:
+        session.proxies.update({
+            "http": proxy_url,
+            "https": proxy_url
+        })
+
+    # ۶. ارسال درخواست
     try:
-        resp = requests.get(page_url, headers=headers, timeout=30)
+        resp = session.get(page_url, timeout=30, allow_redirects=True)
         resp.raise_for_status()
     except requests.exceptions.HTTPError as e:
         print(f"⚠️  درخواست با کد {resp.status_code} مواجه شد: {e}")
@@ -48,11 +57,11 @@ def main():
         print(f"❌ خطای شبکه: {e}")
         sys.exit(1)
 
-    # ------------------- ۴. استخراج لینک‌ها -------------------
+    # ۷. استخراج لینک‌ها
     soup = BeautifulSoup(resp.text, "html.parser")
     links = [a["href"] for a in soup.find_all("a", href=True)]
 
-    # ------------------- ۵. نوشتن در فایل -------------------
+    # ۸. نوشتن در فایل
     with open(filename, "w", encoding="utf-8") as f:
         for link in links:
             f.write(link + "\n")
