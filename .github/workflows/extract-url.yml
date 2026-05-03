@@ -31,7 +31,7 @@ jobs:
 
       # ۳. اجرای اسکریپت استخراج
       - name: Run extractor
-        run: python main/extract.py "${{ github.event.inputs.target_url }}"
+        run: python extract.py "${{ github.event.inputs.target_url }}"
 
       # ۴. Commit و push تغییرات (فایل urls.txt)
       - name: Commit changes
