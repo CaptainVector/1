@@ -33,7 +33,7 @@ jobs:
           pip install requests beautifulsoup4
 
       - name: Run extractor
-        run: python scripts/extract.py "${{ github.event.inputs.target_url }}"
+        run: python extract.py "${{ github.event.inputs.target_url }}"
 
       - name: Commit changes
         env:
